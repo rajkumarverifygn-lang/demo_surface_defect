@@ -21,6 +21,19 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+/* ── Hide all Streamlit chrome ── */
+#MainMenu                        { display: none !important; }
+footer                           { display: none !important; }
+header                           { display: none !important; }
+[data-testid="stToolbar"]        { display: none !important; }
+[data-testid="stDecoration"]     { display: none !important; }
+[data-testid="stStatusWidget"]   { display: none !important; }
+[data-testid="manage-app-button"]{ display: none !important; }
+.viewerBadge_container__1QSob   { display: none !important; }
+.styles_viewerBadge__1yB5_      { display: none !important; }
+#stDecoration                    { display: none !important; }
+
+/* ── App theme ── */
 .main { background-color: #F8F9FA; color: #212529; }
 h1, h2, h3, h4 { color: #212529; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600; }
 .stButton>button { background-color: #FF8C00; color: white; font-weight: bold; border-radius: 4px; border: none; padding: 10px 24px; }
