@@ -1,8 +1,10 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
+from ultralytics import YOLO
 import plotly.express as plotly_express
 import os
+import cv2
 
 # ==========================================
 # 1. PAGE CONFIGURATION & INDUSTRIAL THEME
@@ -27,7 +29,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. ROBUST SESSION STATE INITIALIZATION
+# 2. SESSION STATE INITIALIZATION
 # ==========================================
 if 'total_parts' not in st.session_state:
     st.session_state.total_parts = 0
@@ -45,12 +47,10 @@ if 'current_is_nok' not in st.session_state:
     st.session_state.current_is_nok = False
 
 # ==========================================
-# 3. HELPER FUNCTIONS
+# 3. HELPER FUNCTIONS WITH OPENCV
 # ==========================================
 @st.cache_resource
 def load_model(model_path):
-    # Import inside the function to prevent immediate crashes if environment is still building
-    from ultralytics import YOLO
     try:
         return YOLO(model_path)
     except Exception as e:
@@ -59,8 +59,15 @@ def load_model(model_path):
 
 def process_image(image_pil, model):
     original_w, original_h = image_pil.size 
-    img_640 = image_pil.resize((640, 640), Image.Resampling.BILINEAR)
     
+    # Convert PIL (RGB) to OpenCV (BGR)
+    open_cv_image = np.array(image_pil)
+    img_bgr = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
+    
+    # Resize for YOLO
+    img_640 = cv2.resize(img_bgr, (640, 640))
+    
+    # Run Inference
     results = model(img_640)
     
     is_nok = False
@@ -68,23 +75,21 @@ def process_image(image_pil, model):
     
     names = model.names
     for r in results:
-        # Check if blowhole was detected
         for c in r.boxes.cls:
             if names[int(c)].lower() == blowhole_class_name:
                 is_nok = True
                 break
                 
-    # results[0].plot() returns BGR NumPy array
-    annotated_bgr_np = results[0].plot()
+    # results[0].plot() returns BGR OpenCV format
+    annotated_bgr = results[0].plot()
     
-    # Convert BGR to RGB
-    annotated_rgb_np = annotated_bgr_np[..., ::-1]
+    # Convert BGR (OpenCV) back to RGB (Streamlit)
+    annotated_rgb = cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB)
     
-    # Resize back to original
-    annotated_pil = Image.fromarray(annotated_rgb_np)
-    final_img = annotated_pil.resize((original_w, original_h), Image.Resampling.BILINEAR)
+    # Convert back to PIL to resize to original dimensions cleanly
+    final_img_pil = Image.fromarray(annotated_rgb).resize((original_w, original_h), Image.Resampling.BILINEAR)
     
-    return final_img, is_nok
+    return final_img_pil, is_nok
 
 # ==========================================
 # 4. HEADER LAYOUT
@@ -104,7 +109,6 @@ with header_col3:
 
 st.divider()
 
-# Load Model Safely
 MODEL_PATH = "weights.pt" 
 if os.path.exists(MODEL_PATH):
     model = load_model(MODEL_PATH)
@@ -113,7 +117,7 @@ else:
     model = load_model("yolov8n.pt")
 
 if model is None:
-    st.stop() # Stop execution if model failed to load
+    st.stop()
 
 # ==========================================
 # 5. CORE LOGIC
@@ -139,7 +143,6 @@ with col_control:
             raw_image_pil = Image.open(uploaded_file).convert("RGB")
             current_image_id = uploaded_file.file_id 
 
-# Processing Step
 if raw_image_pil is not None and current_image_id is not None:
     if st.session_state.last_processed_id != current_image_id:
         with st.spinner('Analyzing Part...'):
