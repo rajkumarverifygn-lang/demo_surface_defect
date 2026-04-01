@@ -32,6 +32,14 @@ header                           { display: none !important; }
 .viewerBadge_container__1QSob   { display: none !important; }
 .styles_viewerBadge__1yB5_      { display: none !important; }
 #stDecoration                    { display: none !important; }
+[data-testid="stSidebarNav"]     { display: none !important; }
+.viewerBadge_link__qRIco        { display: none !important; }
+#badge-button                    { display: none !important; }
+[data-testid="baseButton-badge"] { display: none !important; }
+a[href="https://streamlit.io"]   { display: none !important; }
+.st-emotion-cache-1wbqy5l        { display: none !important; }
+div[class*="viewerBadge"]        { display: none !important; }
+div[class*="badge"]              { display: none !important; }
 
 /* ── App theme ── */
 .main { background-color: #F8F9FA; color: #212529; }
