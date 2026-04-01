@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-from ultralytics import YOLO
 import plotly.express as plotly_express
 import os
 
@@ -15,7 +14,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a Light Industrial UI Look
 st.markdown("""
     <style>
     .main { background-color: #F8F9FA; color: #212529; }
@@ -47,10 +45,12 @@ if 'current_is_nok' not in st.session_state:
     st.session_state.current_is_nok = False
 
 # ==========================================
-# 3. HELPER FUNCTIONS (NO OPENCV)
+# 3. HELPER FUNCTIONS
 # ==========================================
 @st.cache_resource
 def load_model(model_path):
+    # Import inside the function to prevent immediate crashes if environment is still building
+    from ultralytics import YOLO
     try:
         return YOLO(model_path)
     except Exception as e:
@@ -58,13 +58,9 @@ def load_model(model_path):
         return None
 
 def process_image(image_pil, model):
-    # PIL size returns (width, height)
     original_w, original_h = image_pil.size 
-    
-    # Resize using PIL instead of cv2
     img_640 = image_pil.resize((640, 640), Image.Resampling.BILINEAR)
     
-    # YOLO can accept PIL images directly
     results = model(img_640)
     
     is_nok = False
@@ -72,18 +68,19 @@ def process_image(image_pil, model):
     
     names = model.names
     for r in results:
+        # Check if blowhole was detected
         for c in r.boxes.cls:
             if names[int(c)].lower() == blowhole_class_name:
                 is_nok = True
                 break
                 
-    # results[0].plot() returns a NumPy array in BGR format (YOLO default)
+    # results[0].plot() returns BGR NumPy array
     annotated_bgr_np = results[0].plot()
     
-    # Convert BGR to RGB using pure NumPy slicing (no cv2 required!)
+    # Convert BGR to RGB
     annotated_rgb_np = annotated_bgr_np[..., ::-1]
     
-    # Convert back to PIL Image and resize to original dimensions
+    # Resize back to original
     annotated_pil = Image.fromarray(annotated_rgb_np)
     final_img = annotated_pil.resize((original_w, original_h), Image.Resampling.BILINEAR)
     
@@ -95,30 +92,34 @@ def process_image(image_pil, model):
 header_col1, header_col2, header_col3 = st.columns([1, 4, 1])
 
 with header_col1:
-    st.image("VFN_logo.png", width=150)
+    if os.path.exists("VFN_logo.png"):
+        st.image("VFN_logo.png", width=150)
 
 with header_col2:
     st.markdown("<h1 style='text-align: center;'>🏭 SURFACE DEFECT DETECTION</h1>", unsafe_allow_html=True)
 
 with header_col3:
-    st.image("JAYAHIND_logo.png", width=150)
+    if os.path.exists("JAYAHIND_logo.png"):
+        st.image("JAYAHIND_logo.png", width=150)
 
 st.divider()
 
-# Load the Model
+# Load Model Safely
 MODEL_PATH = "weights.pt" 
 if os.path.exists(MODEL_PATH):
     model = load_model(MODEL_PATH)
 else:
-    st.warning(f"Model file '{MODEL_PATH}' not found. Using yolov8n.pt for demonstration.")
+    st.warning(f"Model file '{MODEL_PATH}' not found. Using standard yolov8n.pt.")
     model = load_model("yolov8n.pt")
 
+if model is None:
+    st.stop() # Stop execution if model failed to load
+
 # ==========================================
-# 5. CORE LOGIC: ACQUIRE -> PROCESS -> DISPLAY
+# 5. CORE LOGIC
 # ==========================================
 col_control, col_stats = st.columns([1, 1])
 
-# Step A: Image Acquisition
 with col_control:
     st.subheader("Image Acquisition")
     source_type = st.radio("Select Input Source:", ("Live Camera", "Local Disk"))
@@ -130,37 +131,31 @@ with col_control:
         camera_img = st.camera_input("Capture Part")
         if camera_img is not None:
             raw_image_pil = Image.open(camera_img).convert("RGB")
-            current_image_id = camera_img.file_id # Get unique ID
+            current_image_id = camera_img.file_id 
             
     elif source_type == "Local Disk":
         uploaded_file = st.file_uploader("Load Image from Disk", type=['jpg', 'jpeg', 'png', 'bmp'])
         if uploaded_file is not None:
             raw_image_pil = Image.open(uploaded_file).convert("RGB")
-            current_image_id = uploaded_file.file_id # Get unique ID
+            current_image_id = uploaded_file.file_id 
 
-# Step B: Immediate Image Processing & State Update
+# Processing Step
 if raw_image_pil is not None and current_image_id is not None:
-    # ONLY process if this is a brand new image we haven't seen yet
     if st.session_state.last_processed_id != current_image_id:
-        
         with st.spinner('Analyzing Part...'):
-            # Pass PIL image directly to the function
             processed_image_pil, is_nok = process_image(raw_image_pil, model)
             
-        # Update Counts immediately
         st.session_state.total_parts += 1
         if is_nok:
             st.session_state.nok_count += 1
         else:
             st.session_state.ok_count += 1
             
-        # Save results to session state
         st.session_state.last_processed_id = current_image_id
         st.session_state.current_raw_image = raw_image_pil
         st.session_state.current_processed_image = processed_image_pil
         st.session_state.current_is_nok = is_nok
 
-# Step C: Yield Analysis
 with col_stats:
     st.subheader("Yield Analysis")
     labels = ['OK Parts', 'NOK Parts']
