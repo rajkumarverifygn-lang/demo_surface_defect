@@ -96,9 +96,13 @@ def process_image(image_pil, model):
 # ==========================================
 header_col1, header_col2, header_col3 = st.columns([1, 4, 1])
 
+
+
 with header_col1:
     if os.path.exists("VFN_logo.png"):
         st.image("VFN_logo.png", width=150)
+    else:
+        st.write("VFN Logo") # Fallback text
 
 with header_col2:
     st.markdown("<h1 style='text-align: center;'>🏭 SURFACE DEFECT DETECTION</h1>", unsafe_allow_html=True)
@@ -106,6 +110,8 @@ with header_col2:
 with header_col3:
     if os.path.exists("JAYAHIND_logo.png"):
         st.image("JAYAHIND_logo.png", width=150)
+    else:
+        st.write("Jayahind Logo") # Fallback text
 
 st.divider()
 
