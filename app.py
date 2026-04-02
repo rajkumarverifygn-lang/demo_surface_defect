@@ -104,7 +104,7 @@ def draw_boxes_pil(image_pil, boxes_data):
         draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
 
         # Show "Defect" instead of internal class name "blowhole"
-        display_label = "Defect" if label.lower() == "blowhole" else label
+        display_label = "DEFECT" if label.lower() == "blowhole" else label
         text = f"{display_label} {conf:.2f}"
         bbox = draw.textbbox((x1, y1), text, font=font)
         draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], fill=color)
