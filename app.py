@@ -103,7 +103,9 @@ def draw_boxes_pil(image_pil, boxes_data):
 
         draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
 
-        text = f"{label} {conf:.2f}"
+        # Show "Defect" instead of internal class name "blowhole"
+        display_label = "Defect" if label.lower() == "blowhole" else label
+        text = f"{display_label} {conf:.2f}"
         bbox = draw.textbbox((x1, y1), text, font=font)
         draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], fill=color)
         draw.text((x1, y1), text, fill="white", font=font)
@@ -277,7 +279,7 @@ if st.session_state.current_processed_image is not None:
 
     if st.session_state.current_is_nok:
         st.markdown(
-            '<div class="status-nok">❌ NOK (BLOWHOLE DETECTED)</div>',
+            '<div class="status-nok">❌ NOK (DEFECT DETECTED)</div>',
             unsafe_allow_html=True
         )
     else:
